@@ -1242,7 +1242,9 @@ static const char *pmod_mode_string(pmod_mode_t mode) {
     case PMOD_MODE_DISABLED:
       return "Disabled";
     case PMOD_MODE_UI_BOARD:
-      return "ALS OLED UI Board";
+      return "OLED UI Board";
+    case PMOD_MODE_UI_BOARD_1U:
+      return "OLED UI Board 1U";
     case PMOD_MODE_LED:
       return "Indicator LEDs";
     case PMOD_MODE_GPIO:
@@ -1262,7 +1264,8 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
   //   "x 1"    -> Set pmod_mode = PMOD_MODE_UI_BOARD
   //   "x 2"    -> Set pmod_mode = PMOD_MODE_LED
   //   "x 3"    -> Set pmod_mode = PMOD_MODE_GPIO
-  //   "x 4"    -> Invalid; error
+  //   "x 4"    -> Set pmod_mode = PMOD_MODE_UI_BOARD_1U
+  //   "x 5"    -> Invalid; error
   int query = sscanfQuery(rx_msg, len);
   const char *modestr;
   pmod_mode_t pmod_mode;
@@ -1276,7 +1279,7 @@ static int handle_pmod_mode(const char *rx_msg, int len) {
       printf("    %d: %s\r\n", n, pmod_mode_string((pmod_mode_t)n));
     }
     return 0;
-  } 
+  }
   int mode = -1;
   int index = sscanfNext(rx_msg+1, len) + 1;
   mode = sscanfUnsignedDecimal(rx_msg+index, len-index);
