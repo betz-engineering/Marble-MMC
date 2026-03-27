@@ -6,6 +6,7 @@
 #include "display.h"
 #include "lv_font.h"
 #include "ui_board.h"
+#include "ui_board_spi.h"
 #include "frame_buffer.h"
 #include "ssd1322.h"
 #include "gui.h"
@@ -312,7 +313,38 @@ void display_update(void) {
 
   // Check encoder knob
   int refresh = 0;
-  if (do_update(last_update) || btns) {
+  if (new_status == BOARD_STATUS_GOOD) {
+
+    bool ready_for_new_frame = ui_board_poll();
+    if (!ready_for_new_frame)
+      return;
+
+    unsigned events = get_event_flags();
+    // Only checking encoder (button/knob) when power good
+    if (events & EV_ROT_CCW) {
+      // Turn left; decrease page number
+      if (current_page == PAGE_FIRST) {
+        current_page = PAGE_LAST;
+      } else {
+        --current_page;
+      }
+      display_enable();
+      refresh = 1;
+    } else if (events & EV_ROT_CW) {
+      // Turn right; increase page number
+      if (current_page == PAGE_LAST) {
+        current_page = PAGE_FIRST;
+      } else {
+        ++current_page;
+      }
+      display_enable();
+      refresh = 1;
+    } else if (events & EV_ENC_S) {
+      // Push button, toggle ON/OFF
+      display_toggle();
+    }
+  }
+  if (do_update(last_update) || refresh) {
     if (new_status == BOARD_STATUS_GOOD) {
       if (display_enabled) {
         // update_page(refresh);
@@ -369,7 +401,6 @@ void display_update(void) {
   return;
 }
 
-
 static display_page_t menu(unsigned btns)
 {
 	static unsigned frm = 0;
@@ -385,7 +416,7 @@ static display_page_t menu(unsigned btns)
 	} else if (btns & (1 << 1)) {  // right
 		selection_id++;
 	}
-	
+
 	cursor_y_goal = 43-(20*selection_id);
 	if(text_cursor == (text_cursor+cursor_y_goal)/2) {
 		text_cursor = cursor_y_goal;
@@ -438,7 +469,7 @@ static display_page_t menu(unsigned btns)
 	// 		// emptyRoundedRect(6, 22, 250, 42, 10, 1);
   //     emptyRoundedRect(0, LINE_SPACING_17+2, DISPLAY_WIDTH, 2*LINE_SPACING_17+1, (LINE_SPACING_17-2)/2,1); // white background for title
 	// }
-	
+
 	errorLight(frm);
 	frm++;
 	return MENU; // stay in menu
@@ -471,7 +502,7 @@ static display_page_t config_warning(unsigned btns)
 			selection_id = 0;
 		if(selection_id <= -1) // bounce back at the end
 			selection_id = 1;
-	
+
 
 	if(selection_id == 0) {
 		invertRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10);
@@ -513,7 +544,7 @@ static display_page_t config(unsigned btns)
 	} else if (btns & (1 << 1)) {  // right
 		selection_id++;
 	}
-	
+
 	cursor_y_goal = 23-(20*selection_id);
 
 	if(text_cursor == (text_cursor+cursor_y_goal)/2) {
@@ -739,9 +770,6 @@ static void update_display_error(int refresh) {
     }
     refresh = 1;
   }
-  if (refresh) {
-    send_fb();
-  }
   last_status = status;
   return;
 }
@@ -807,7 +835,7 @@ static display_page_t page_status(unsigned btns) {
     lv_init_label(&label_temperature_max6639_1_label, (1*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "PSU", LV_CENTER, true);
     invertRoundedRect((1*DISPLAY_WIDTH)/5+1, text_cursor, (2*DISPLAY_WIDTH)/5-1, text_cursor + 12, 4); // white background for title
     emptyRoundedRect((1*DISPLAY_WIDTH)/5+1, text_cursor, (2*DISPLAY_WIDTH)/5-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
-    
+
     lv_init_label(&label_temperature_max6639_1_label, 4, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "IP", LV_LEFT, true);
     invertRoundedRect(0, text_cursor + 2*LINE_SPACING_12, 17, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
     emptyRoundedRect(0, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2-1, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
@@ -882,7 +910,7 @@ static display_page_t page_info(unsigned btns) {
     else {
       text_cursor=(text_cursor+cursor_y_goal)/2;
     }
-    
+
     // Marble Revision
     int rev = 0;
     if (marble_get_pcb_rev() == Marble_v1_4) {
@@ -898,7 +926,7 @@ static display_page_t page_info(unsigned btns) {
     char firmware_rev[34];
     snprintf(firmware_rev, sizeof(firmware_rev), "Firmware revision: %s [Git]", GIT_REV);
     lv_init_label(&label_firmware, (LINE_SPACING_17-2)/2, text_cursor + 1*LINE_SPACING_12, &lv_font_roboto_12, firmware_rev, LV_LEFT, true);
-    
+
     // IP addr
     uint8_t *pip = get_last_ip();
     char label[16];
@@ -1186,7 +1214,7 @@ static display_page_t page_errors(unsigned btns) {
     selection_id = 0;
     title_y_goal = 23; // move title down
   }
-  
+
   title_y = smooth_slide(title_y, title_y_goal);
 
   // Display contents only when title in position
@@ -1200,9 +1228,9 @@ static display_page_t page_errors(unsigned btns) {
     else { // display errors
 
       if (error_lines <= 2) { // no scrolling needed
-        selection_id = 0; 
+        selection_id = 0;
         text_cursor = LINE_SPACING_17;
-      } 
+      }
       else { // smooth scrolling
         cursor_y_goal = LINE_SPACING_17-(LINE_SPACING_12*selection_id);
         if(text_cursor == (text_cursor+cursor_y_goal)/2) {
@@ -1261,7 +1289,7 @@ static display_page_t page_errors(unsigned btns) {
       invertRoundedRect((2*DISPLAY_WIDTH)/4+1+14, text_cursor, (3*DISPLAY_WIDTH)/4-1, text_cursor+12, 4); // white background for title
       lv_init_label(&label_error, DISPLAY_WIDTH/4+7, text_cursor, &lv_font_roboto_12, "Error", LV_CENTER, true);
       invertRoundedRect((0*DISPLAY_WIDTH)/4, text_cursor, (2*DISPLAY_WIDTH)/4-1+14, text_cursor+12, 4); // white background for title
-    }  
+    }
   }
   // window title, error light
   fillRect(0, DISPLAY_WIDTH, title_y, title_y+LINE_SPACING_17-1, 0x00); // erase background for title
@@ -1303,7 +1331,7 @@ static display_page_t page_clear_errors(unsigned btns)
 			selection_id = 0;
 		if(selection_id <= -1)
 			selection_id = 1;
-	
+
 
 	if(selection_id == 0) {
 		invertRoundedRect(rectangle_coordinates[0][0]-1, rectangle_coordinates[0][1]-1, rectangle_coordinates[0][2]+1, rectangle_coordinates[0][3]+1, 10);
@@ -1318,7 +1346,7 @@ static display_page_t page_clear_errors(unsigned btns)
 		if (btns & (1 << 2)) { // push
 			selection_id = 0; // default cancel button
       error_reset_time = marble_uptime_seconds();
-			return MENU; 
+			return MENU;
     }
 	}
 
@@ -1530,10 +1558,11 @@ static int update_page_temperature(int refresh) {
   return rval;
 }
 
-void display_init(void) {
+void display_init(bool is_ui_board_1u) {
   // For lack of a better place, let's put this here for now
-  printf("        Initializing UI board\r\n");
-  uiBoardInit();
+  printf("Initializing UI_BOARD%s\r\n", is_ui_board_1u ? "_1U" : "");
+  ui_board_spi_init();
+  ui_init(is_ui_board_1u ? UI_BOARD_1U : UI_BOARD);
   set_inverted(0);
 
   fill(0);
@@ -1553,7 +1582,6 @@ void display_init(void) {
 #endif
   init_page_temperature();
   // update_page(1); // force refresh
-  send_fb();
   last_touch = BSP_GET_SYSTICK();
   return;
 }
@@ -1741,7 +1769,7 @@ static void window_scrollbar(int16_t pos, int16_t total){
     blockBottom = DISPLAY_HEIGHT - 2;
     if(blockTop > blockBottom) blockTop = blockBottom;
   }
-  invertRoundedRect(DISPLAY_WIDTH - 6, blockTop, DISPLAY_WIDTH - 2, blockBottom, 2); 
+  invertRoundedRect(DISPLAY_WIDTH - 6, blockTop, DISPLAY_WIDTH - 2, blockBottom, 2);
   emptyRoundedRect(DISPLAY_WIDTH - 7, 1 + LINE_SPACING_17, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 2, 3, 1);
 }
 
@@ -1773,13 +1801,13 @@ static void update_led(void) {
   uint32_t now = BSP_GET_SYSTICK();
   Board_Status_t status = marble_get_status();
   if (status == BOARD_STATUS_GOOD) {
-    setLed(0); // off
+    set_ledb(0); // off
     return;
   }
   if ((now-blink_time) < ERROR_LED_TIME_ON_MS) {
-    setLed(1); // red
+    set_ledb(1); // red
   } else if ((now-blink_time) < ERROR_LED_TIME_OFF_MS) {
-    setLed(0); // off
+    set_ledb(0); // off
   } else {
     blink_time = now;
   }

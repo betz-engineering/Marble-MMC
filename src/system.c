@@ -337,9 +337,9 @@ static void system_pmod_mode_disabled(void) {
   return;
 }
 
-static void system_pmod_mode_ui_board(void) {
+static void system_pmod_mode_ui_board(bool is_ui_board_1u) {
 #ifdef UI_BOARD_SUPPORTED
-  display_init();
+  display_init(is_ui_board_1u);
 #else
   printf("*** UI board support disabled for this build!  Please update MMC image to use this feature ***\r\n");
 #endif
@@ -371,8 +371,11 @@ static void pmod_subsystem_init(void) {
       // Nothing to do
       system_pmod_mode_disabled();
       break;
+    case PMOD_MODE_UI_BOARD_1U:
+      system_pmod_mode_ui_board(true);
+      break;
     case PMOD_MODE_UI_BOARD:
-      system_pmod_mode_ui_board();
+      system_pmod_mode_ui_board(false);
       break;
     case PMOD_MODE_LED:
       system_pmod_mode_led();
@@ -576,11 +579,12 @@ static void pmod_subsystem_service(void) {
     case PMOD_MODE_DISABLED:
       // Nothing to do
       break;
-    case PMOD_MODE_UI_BOARD:
 #ifdef UI_BOARD_SUPPORTED
+    case PMOD_MODE_UI_BOARD:
+    case PMOD_MODE_UI_BOARD_1U:
       display_update();
-#endif
       break;
+#endif
     case PMOD_MODE_LED:
       // Unimplemented
       break;
