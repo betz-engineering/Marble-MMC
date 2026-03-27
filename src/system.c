@@ -12,12 +12,10 @@
 #include "ltm4673.h"
 #include "watchdog.h"
 
-#undef UI_BOARD_SUPPORTED
-
 #ifdef MARBLE_V2
 // NOTE - Support for the oled UI board will be re-introduced once licensing has been ironed out
 // NOTE - Currently only supported on Marble (not Marble-mini)
-// #define UI_BOARD_SUPPORTED
+#define UI_BOARD_SUPPORTED
 #include "display.h"
 #endif
 
@@ -99,7 +97,7 @@ static void timer_int_handler(void);
 static void system_apply_internal_params(void);
 static void system_apply_external_params(void);
 static void system_pmod_mode_disabled(void);
-static void system_pmod_mode_ui_board(void);
+static void system_pmod_mode_ui_board(bool is_ui_board_1u);
 static void system_pmod_mode_led(void);
 static void system_pmod_led_init(void);
 static void system_pmod_timer_disable(void);
