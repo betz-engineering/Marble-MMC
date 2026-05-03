@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "display.h"
-#include "lv_font.h"
+#include "font.h"
 #include "ui_board.h"
 #include "ui_board_spi.h"
 #include "frame_buffer.h"
@@ -33,7 +33,12 @@
 #define PAGE_INFO_ITEMS           (8) // Number of items on the INFO page
 // ==========================================================
 
-extern lv_font_t lv_font_roboto_12, lv_font_roboto_mono_17, lv_font_fa;
+extern const font_header_t f_roboto, f_roboto_mono, f_font_awesome_5_free;
+
+// Legacy compatibility
+#define lv_font_roboto_12 f_roboto
+#define lv_font_roboto_mono_17 f_roboto_mono
+#define lv_font_fa f_font_awesome_5_free;
 
 typedef enum {
   MENU=0,
@@ -305,16 +310,15 @@ static void update_led(void);
 
 void display_update(void) {
 	static display_page_t current_page = MENU;
-  uint8_t btns = uiBoardPoll();
   display_enable();
   static uint32_t last_update = 0;
   static Board_Status_t status = BOARD_STATUS_GOOD;
   Board_Status_t new_status = marble_get_status();
 
   // Check encoder knob
+  uint8_t btns = 0;  // legacy encoder state: {push, right, left}
   int refresh = 0;
   if (new_status == BOARD_STATUS_GOOD) {
-
     bool ready_for_new_frame = ui_board_poll();
     if (!ready_for_new_frame)
       return;
@@ -330,6 +334,7 @@ void display_update(void) {
       }
       display_enable();
       refresh = 1;
+      btns |= (1 << 0);
     } else if (events & EV_ROT_CW) {
       // Turn right; increase page number
       if (current_page == PAGE_LAST) {
@@ -339,9 +344,12 @@ void display_update(void) {
       }
       display_enable();
       refresh = 1;
-    } else if (events & EV_ENC_S) {
+      btns |= (1 << 1);
+    }
+    if (events & EV_ENC_S) {
       // Push button, toggle ON/OFF
       display_toggle();
+      btns |= (1 << 2);
     }
   }
   if (do_update(last_update) || refresh) {
@@ -383,7 +391,6 @@ void display_update(void) {
             current_page = MENU;
             break;
         }
-        send_fb();
       }
     } else {
       display_enable();
@@ -1611,9 +1618,9 @@ static void init_page_power(void) {
   lv_init_label(&label_power_1V8,            0, 2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V8_init, LV_LEFT, false);
 #if ENABLE_FMC_CURRENT_CHECK == 0
   lv_init_label(&label_fmc_1,                0, 3*LINE_SPACING_12, &lv_font_roboto_12, label_fmc_1_init, LV_LEFT, false);
-  int max_width = MAX(MAX(label_power_3V3.x1, label_power_1V8.x1), label_fmc_1.x1);
+  int max_width = MAX(MAX(label_power_3V3.bb.right, label_power_1V8.bb.right), label_fmc_1.bb.right);
 #else
-  int max_width = MAX(label_power_3V3.x1, label_power_1V8.x1);
+  int max_width = MAX(label_power_3V3.bb.right, label_power_1V8.bb.right);
 #endif
   lv_init_label(&label_power_2V5, max_width+12, 1*LINE_SPACING_12, &lv_font_roboto_12, label_power_2V5_init, LV_LEFT, false);
   lv_init_label(&label_power_1V0, max_width+12, 2*LINE_SPACING_12, &lv_font_roboto_12, label_power_1V0_init, LV_LEFT, false);
@@ -1638,8 +1645,8 @@ static void init_page_temperature(void) {
   lv_init_label(&label_temperature_lm75_1_label,    0, 1*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_1_label_init,    LV_LEFT, false);
   lv_init_label(&label_temperature_max6639_1_label, 0, 2*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_1_label_init, LV_LEFT, false);
   lv_init_label(&label_temperature_max6639_2_label, 0, 3*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_2_label_init, LV_LEFT, false);
-  int xmax = MAX(MAX(label_temperature_lm75_0_label.x1, label_temperature_lm75_1_label.x1),
-                 MAX(label_temperature_max6639_1_label.x1, label_temperature_max6639_2_label.x1));
+  int xmax = MAX(MAX(label_temperature_lm75_0_label.bb.right, label_temperature_lm75_1_label.bb.right),
+                 MAX(label_temperature_max6639_1_label.bb.right, label_temperature_max6639_2_label.bb.right));
   lv_init_label(&label_temperature_lm75_0,     xmax+4, 0*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_0_init,    LV_LEFT, false);
   lv_init_label(&label_temperature_lm75_1,     xmax+4, 1*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_lm75_1_init,    LV_LEFT, false);
   lv_init_label(&label_temperature_max6639_1,  xmax+4, 2*LINE_SPACING_12, &lv_font_roboto_12, label_temperature_max6639_1_init, LV_LEFT, false);
