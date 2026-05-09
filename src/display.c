@@ -315,47 +315,22 @@ void display_update(void) {
   static Board_Status_t status = BOARD_STATUS_GOOD;
   Board_Status_t new_status = marble_get_status();
 
-  // Check encoder knob
-  uint8_t btns = 0;  // legacy encoder state: {push, right, left}
-  int refresh = 0;
-  if (new_status == BOARD_STATUS_GOOD) {
+  if (do_update(last_update)) {
     bool ready_for_new_frame = ui_board_poll();
     if (!ready_for_new_frame)
       return;
-
     unsigned events = get_event_flags();
-    // Only checking encoder (button/knob) when power good
-    if (events & EV_ROT_CCW) {
-      // Turn left; decrease page number
-      if (current_page == PAGE_FIRST) {
-        current_page = PAGE_LAST;
-      } else {
-        --current_page;
-      }
-      display_enable();
-      refresh = 1;
+    // Check encoder knob
+    uint8_t btns = 0;  // legacy encoder state: {push, right, left}
+    if (events & EV_ROT_CCW)
       btns |= (1 << 0);
-    } else if (events & EV_ROT_CW) {
-      // Turn right; increase page number
-      if (current_page == PAGE_LAST) {
-        current_page = PAGE_FIRST;
-      } else {
-        ++current_page;
-      }
-      display_enable();
-      refresh = 1;
+    else if (events & EV_ROT_CW)
       btns |= (1 << 1);
-    }
-    if (events & EV_ENC_S) {
-      // Push button, toggle ON/OFF
-      display_toggle();
+    if (events & EV_ENC_S)
       btns |= (1 << 2);
-    }
-  }
-  if (do_update(last_update) || refresh) {
+
     if (new_status == BOARD_STATUS_GOOD) {
       if (display_enabled) {
-        // update_page(refresh);
         switch(current_page) {
           case MENU:
             current_page = menu(btns);
@@ -1785,7 +1760,7 @@ static void errorLight(unsigned frm) {
   if(marble_last_error_tick() > error_reset_time){  // if error occurred after last error clear, highlight it
     lv_init_label(&error_light, 227, 3, &lv_font_roboto_12, "ERROR", LV_CENTER, true);
     if((frm>>2)%2)
-      invertRoundedRect(200, 1, 254, 17, 8);
+      invertRoundedRect(200, 1, 254, 17, 6);
   }
 }
 
