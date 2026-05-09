@@ -315,10 +315,8 @@ void display_update(void) {
   static Board_Status_t status = BOARD_STATUS_GOOD;
   Board_Status_t new_status = marble_get_status();
 
-  if (do_update(last_update)) {
-    bool ready_for_new_frame = ui_board_poll();
-    if (!ready_for_new_frame)
-      return;
+  bool new_frame = do_update(last_update);
+  if (new_frame) {
     unsigned events = get_event_flags();
     // Check encoder knob
     uint8_t btns = 0;  // legacy encoder state: {push, right, left}
@@ -380,6 +378,8 @@ void display_update(void) {
     display_timeout();
     update_led();
   }
+  // This is lightweight but needs to be called in a hot loop to track encoder state
+  ui_board_poll(new_frame);
   return;
 }
 
