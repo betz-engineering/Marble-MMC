@@ -1,3 +1,16 @@
+# new_gui branch
+This branch contains a newly developed GUI with animations.
+The original development happened before [font_lib](https://github.com/michael-betz/font_lib) existed. Instead it was baed on the `alsu_mo` branch of the LBL [oled](https://github.com/BerkeleyLab/oled/tree/alsu_mo) library.
+
+In this branch I have ported this GUI to the `font_lib` graphics library and made it compatible with ui_board_1u.
+
+Testing it on hardware revealed some issues, which still need to be fixed:
+
+  - [ ] Major: My Marble board often doesn't boot correctly with this firmware. It fails to enable the 3V3 rail. Not clear why. The `ui_board_1u` branch works reliably for me.
+  - [ ] Major: The encoder looses steps now and then and feels sluggish. This does not happen on the `ui_board_1u` branch, even when calling `ui_board_poll(true)` in every iteration. Is the main loop to slow on this firmware? Are there performance issues with font_lib? Need to investigate the root cause of this. A first step would be to measure the framerate.
+  - [ ] Some minor graphic bugs, like over-drawn rectangles or too large corner rounding.
+
+
 # ui_board_1u branch
   * support for ui_board and ui_board_1u
   * support for new oled library with cleaned up interface definition
