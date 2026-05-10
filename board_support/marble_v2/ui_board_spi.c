@@ -71,18 +71,6 @@ void ui_board_spi_init(void) {
   HAL_Delay(1);
 }
 
-// Return true as long as a background (DMA / interrupts based)
-// SPI transaction is in progress.
-bool ui_spi_is_busy(void) {
-  return HAL_SPI_GetState(&hspi2) != HAL_SPI_STATE_READY;
-}
-
-// Called from interrupt context when the background SPI transaction is complete
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-  // if the MCP23 needs to be read, this will jump straight to mcp23_isr();
-  ui_set_int_enabled(true);
-}
-
 void ui_set_int_enabled(bool val) {
   if (val)
     EXTI->IMR |= PIN_INT; // enable pin 14 interrupt
@@ -98,8 +86,10 @@ uint8_t ui_spi_rx_tx(uint8_t val) {
   return rx_data;
 }
 
+// Initiate a blocking N bit SPI transmission.
 void ui_spi_tx_chunk(uint8_t *buf, unsigned len) {
-  HAL_SPI_Transmit_DMA(&hspi2, buf, len);
+  HAL_SPI_Transmit(&hspi2, buf, len, 100);
+  ui_set_cs_n(SELECT_NONE);
 }
 
 // Set the state of the 2 CS_N pins: bit1: CS_N_MCP, bit0: CS_N_OLED
