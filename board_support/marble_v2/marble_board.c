@@ -33,6 +33,8 @@
 #include "marble_errors.h"
 #include "string.h"
 #include "uart_fifo.h"
+#include "ui_board_spi.h"
+#include "ui_board.h"
 #include "console.h"
 #include "eeprom.h"
 #include "i2c_pm.h"
@@ -256,7 +258,7 @@ void marble_error_handler(MarbleErrorCode_t code, uint8_t caller_id) {
         printf("\r\033[31m*** MMC ERROR: repeating ***\033[0m\r\n> ");
         repeating_error = idx;
       } else {
-        if (error_last_tick[idx] - error_previous_tick == 2){ 
+        if (error_last_tick[idx] - error_previous_tick == 2){
           printf(".");
           fflush(stdout);
         }
@@ -729,12 +731,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
       marble_FPGA_DONE_handler();
    } else if (GPIO_Pin == SMBA_PIN) {
       I2C_PM_smba_handler();
+   } else if (GPIO_Pin == PIN_INT) {
+      mcp23_isr();
    }
 }
 
 // Override default (weak) IRQHandler and redirect to HAL shim
 void EXTI15_10_IRQHandler(void) {
    HAL_GPIO_EXTI_IRQHandler(SMBA_PIN);
+   HAL_GPIO_EXTI_IRQHandler(PIN_INT);  // ui_board MCP23 pin change interrupt
 }
 
 void marble_GPIOint_init(void)
@@ -905,12 +910,12 @@ static void marble_I2C_error_handler(I2C_BUS I2C_bus, int rc) {
     // Handle function return codes first
     switch (rc) {
         case HAL_TIMEOUT:{
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT : 
+            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_TIMEOUT :
                         isPM   ? ERROR_I2C_PM_TIMEOUT   : ERROR_UNDEFINED, 3);
             break;
           }
         case HAL_BUSY:{
-            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_BUSY : 
+            marble_error_handler(isFPGA ? ERROR_I2C_FPGA_BUSY :
                         isPM   ? ERROR_I2C_PM_BUSY   : ERROR_UNDEFINED, 4);
             break;
           }

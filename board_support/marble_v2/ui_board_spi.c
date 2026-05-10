@@ -50,13 +50,17 @@ void ui_board_spi_init(void) {
   GPIO_InitStruct.Pin = PIN_D_C;
   HAL_GPIO_Init(PORT_D_C, &GPIO_InitStruct);
 
-  // ---------------
-  //  Input pin
-  // ---------------
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  // -------------------------------
+  //  MCP23 interrupt on pin change
+  // -------------------------------
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   GPIO_InitStruct.Pin = PIN_INT;
   HAL_GPIO_Init(PORT_INT, &GPIO_InitStruct);
+
+  // Pins 10 through 15 share the same interrupt vector
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 7);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   // --------
   //  RESET!
@@ -71,6 +75,19 @@ void ui_board_spi_init(void) {
 // SPI transaction is in progress.
 bool ui_spi_is_busy(void) {
   return HAL_SPI_GetState(&hspi2) != HAL_SPI_STATE_READY;
+}
+
+// Called from interrupt context when the background SPI transaction is complete
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
+  // if the MCP23 needs to be read, this will jump straight to mcp23_isr();
+  ui_set_int_enabled(true);
+}
+
+void ui_set_int_enabled(bool val) {
+  if (val)
+    EXTI->IMR |= PIN_INT; // enable pin 14 interrupt
+  else
+    EXTI->IMR &= ~PIN_INT; // disable pin 14 interrupt
 }
 
 // Initiate a blocking 8 bit SPI transaction. Transmit val on SDO, MSB first.
