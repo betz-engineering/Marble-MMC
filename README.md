@@ -7,8 +7,9 @@ In this branch I have ported this GUI to the `font_lib` graphics library and mad
 Testing it on hardware revealed some issues, which still need to be fixed:
 
   - [ ] Major: My Marble board often doesn't boot correctly with this firmware. It fails to enable the 3V3 rail. Not clear why. The `ui_board_1u` branch works reliably for me.
-  - [ ] Major: The encoder looses steps now and then and feels sluggish. This does not happen on the `ui_board_1u` branch, even when calling `ui_board_poll(true)` in every iteration. Is the main loop to slow on this firmware? Are there performance issues with font_lib? Need to investigate the root cause of this. A first step would be to measure the framerate.
-  - [ ] Some minor graphic bugs, like over-drawn rectangles or too large corner rounding.
+  - [x] The encoder looses steps now and then and feels sluggish. This does not happen on the `ui_board_1u` branch, even when calling `ui_board_poll(true)` in every iteration. Is the main loop to slow on this firmware? Are there performance issues with font_lib? Need to investigate the root cause of this. A first step would be to measure the framerate.
+  This has been fixed by letting the MCP23 trigger an interrupt on pin change.
+  - [x] Some minor graphic bugs, like over-drawn rectangles or too large corner rounding. Fixed by fudging some numbers 😉
 
 
 # ui_board_1u branch

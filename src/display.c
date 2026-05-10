@@ -376,9 +376,9 @@ void display_update(void) {
   }
   if (display_enabled) {
     display_timeout();
-    update_led();
   }
-  // This is lightweight but needs to be called in a hot loop to track encoder state
+  update_led();
+  // transmits the pixels to the OLED
   ui_board_poll(new_frame);
   return;
 }
@@ -464,8 +464,8 @@ static display_page_t config_warning(unsigned btns)
 	static int16_t selection_id = 0;
 
 	const int rectangle_coordinates[][4] = {
-		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, 64},  // CANCEL
-		{(3*DISPLAY_WIDTH)/4 - 43, 44, (3*DISPLAY_WIDTH)/4 + 43, 64}  // Proceed
+		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, 63},  // CANCEL
+		{(3*DISPLAY_WIDTH)/4 - 43, 44, (3*DISPLAY_WIDTH)/4 + 43, 63}  // Proceed
 	};
 
 	fill(0);
@@ -611,12 +611,12 @@ static display_page_t set_IP(unsigned btns)
 	static bool ip_selected = 0;
 	static bool ip_success = 0;
 	const int rectangle_coordinates[][4] = {
-		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, DISPLAY_HEIGHT},  // CANCEL
+		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, DISPLAY_HEIGHT - 1},  // CANCEL
 		{51, 20, 84, 39}, // IP 1
 		{91, 20, 124, 39}, // IP 2
 		{131, 20, 164, 39}, // IP 3
 		{171, 20, 204, 39},  // IP 4
-		{(DISPLAY_WIDTH*3)/4 - 38, 44, (DISPLAY_WIDTH*3)/4 + 38, DISPLAY_HEIGHT}  // SET IP
+		{(DISPLAY_WIDTH*3)/4 - 38, 44, (DISPLAY_WIDTH*3)/4 + 38, DISPLAY_HEIGHT - 1}  // SET IP
 	};
 
   // set bytes to current IP if first frame
@@ -793,7 +793,7 @@ static display_page_t page_status(unsigned btns) {
     // uptime
     char label1[40];
     snprintf(label1, 40, "%s", print_uptime());
-    lv_init_label(&label_uptime, (3*DISPLAY_WIDTH)/4+10, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, label1, LV_CENTER, true);
+    lv_init_label(&label_uptime, (3*DISPLAY_WIDTH)/4+10, text_cursor + 2*LINE_SPACING_12 + 1, &lv_font_roboto_12, label1, LV_CENTER, true);
     // LM75_0
     lm75_0_temp = LM75_get_cached_temperature(LM75_0); // does not trigger readout so OK to call frequently
     snprintf(label, LABEL_TEMPERATURE_LM75_0_SIZE, LABEL_TEMPERATURE_LM75_0_FMT, ((float)lm75_0_temp)/2);
@@ -808,7 +808,7 @@ static display_page_t page_status(unsigned btns) {
     char ip_string[LABEL_IP_SIZE + 1];
     format_ip_addr(pip, ip_string, LABEL_IP_SIZE);
     // ip_string[LABEL_IP_SIZE] = '\0'; // null-terminate
-    lv_init_label(&label_ip, (1*DISPLAY_WIDTH)/4+8, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, ip_string, LV_CENTER, true);
+    lv_init_label(&label_ip, (1*DISPLAY_WIDTH)/4+8, text_cursor + 2*LINE_SPACING_12 + 1, &lv_font_roboto_12, ip_string, LV_CENTER, true);
 
     // titles
     lv_init_label(&label_temperature_max6639_2_label, (2*DISPLAY_WIDTH)/5+DISPLAY_WIDTH/10, text_cursor + 0*LINE_SPACING_12, &lv_font_roboto_12, "FPGA", LV_CENTER, true);
@@ -818,11 +818,11 @@ static display_page_t page_status(unsigned btns) {
     invertRoundedRect((1*DISPLAY_WIDTH)/5+1, text_cursor, (2*DISPLAY_WIDTH)/5-1, text_cursor + 12, 4); // white background for title
     emptyRoundedRect((1*DISPLAY_WIDTH)/5+1, text_cursor, (2*DISPLAY_WIDTH)/5-1, text_cursor + LINE_SPACING_12 + 13, 4,1); // erase background for title
 
-    lv_init_label(&label_temperature_max6639_1_label, 4, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "IP", LV_LEFT, true);
+    lv_init_label(&label_temperature_max6639_1_label, 4, text_cursor + 2*LINE_SPACING_12 + 1, &lv_font_roboto_12, "IP", LV_LEFT, true);
     invertRoundedRect(0, text_cursor + 2*LINE_SPACING_12, 17, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
     emptyRoundedRect(0, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2-1, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
 
-    lv_init_label(&label_temperature_max6639_1_label, (DISPLAY_WIDTH)/2+4, text_cursor + 2*LINE_SPACING_12, &lv_font_roboto_12, "Up", LV_LEFT, true);
+    lv_init_label(&label_temperature_max6639_1_label, (DISPLAY_WIDTH)/2+4, text_cursor + 2*LINE_SPACING_12 + 1, &lv_font_roboto_12, "Up", LV_LEFT, true);
     invertRoundedRect((DISPLAY_WIDTH)/2+1, text_cursor + 2*LINE_SPACING_12, (DISPLAY_WIDTH)/2+1+20, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4); // white background for title
     emptyRoundedRect((DISPLAY_WIDTH)/2+1, text_cursor + 2*LINE_SPACING_12, (5*DISPLAY_WIDTH)/5, text_cursor + DISPLAY_HEIGHT - LINE_SPACING_17, 4,1); // erase background for title
     // VIN
@@ -1293,8 +1293,8 @@ static display_page_t page_clear_errors(unsigned btns)
 	static int16_t selection_id = 0;
 
 	const int rectangle_coordinates[][4] = {
-		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, 64},  // CANCEL
-		{(3*DISPLAY_WIDTH)/4 - 38, 44, (3*DISPLAY_WIDTH)/4 + 38, 64}  // Proceed
+		{DISPLAY_WIDTH/4 - 38, 44, DISPLAY_WIDTH/4 + 38, 63},  // CANCEL
+		{(3*DISPLAY_WIDTH)/4 - 38, 44, (3*DISPLAY_WIDTH)/4 + 38, 63}  // Proceed
 	};
 
 	fill(0);
@@ -1751,7 +1751,7 @@ static void window_scrollbar(int16_t pos, int16_t total){
     blockBottom = DISPLAY_HEIGHT - 2;
     if(blockTop > blockBottom) blockTop = blockBottom;
   }
-  invertRoundedRect(DISPLAY_WIDTH - 6, blockTop, DISPLAY_WIDTH - 2, blockBottom, 2);
+  invertRoundedRect(DISPLAY_WIDTH - 6, blockTop, DISPLAY_WIDTH - 2, blockBottom, 1);
   emptyRoundedRect(DISPLAY_WIDTH - 7, 1 + LINE_SPACING_17, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 2, 3, 1);
 }
 
@@ -1783,9 +1783,11 @@ static void update_led(void) {
   uint32_t now = BSP_GET_SYSTICK();
   Board_Status_t status = marble_get_status();
   if (status == BOARD_STATUS_GOOD) {
+    set_leda(2); // green
     set_ledb(0); // off
     return;
   }
+  set_leda(0);
   if ((now-blink_time) < ERROR_LED_TIME_ON_MS) {
     set_ledb(1); // red
   } else if ((now-blink_time) < ERROR_LED_TIME_OFF_MS) {
